@@ -1,0 +1,5 @@
+undetected-chromedriver
+selenium
+natsort
+pygobject # needed for pywebview
+pywebview[qt]
