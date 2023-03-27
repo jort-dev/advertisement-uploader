@@ -15,6 +15,7 @@ from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.action_chains import ActionChains
 
 delay = 1
 marktplaats_upload_url = "https://www.marktplaats.nl/plaats"
@@ -26,12 +27,18 @@ def printt(*argss, **kwargs):
         print(to_print, **kwargs)
 
 
+def center_element(element):
+    driver.execute_script(
+        "arguments[0].scrollIntoView({'block':'center','inline':'center'})", element)
+
+
 def enter_field(xpath, text):
     try:
         element = WebDriverWait(driver, 3).until(
             EC.presence_of_element_located((By.XPATH, xpath)))
         if element is None:
             quit(f"Could not find element with {xpath} to enter {text}")
+        center_element(element)
         printt(f"Entering {text}")
         element.send_keys(text)
         time.sleep(delay)
@@ -47,6 +54,7 @@ def click_button(xpath):
         # element = driver.find_element(by=By.XPATH, value=xpath)
         if button is None:
             quit(f"Could not find button with {xpath} to click")
+        center_element(button)
         printt(f"Clicking button.")
         button.click()
         time.sleep(delay)
@@ -78,7 +86,7 @@ def enter_title(title):
     find_category_button_xpath = '//*[@id="find-category"]'
     click_button(find_category_button_xpath)
 
-    time.sleep(1)
+    time.sleep(delay)
     submit_title_button_xpath = '//*[@id="category-selection-submit"]'
     click_button(submit_title_button_xpath)
 
@@ -90,14 +98,24 @@ def enter_description(description_text):
     time.sleep(delay)
     description_iframe_xpath = '//*[@id="description_nl-NL_ifr"]'
     description_field_xpath = '//*[@id="tinymce"]'
+
+    # wait for the description element to load, as it is within an iframe
     WebDriverWait(driver, 5).until(
         EC.frame_to_be_available_and_switch_to_it((By.XPATH, description_iframe_xpath)))
-    WebDriverWait(driver, 5).until(
-        EC.element_to_be_clickable((By.XPATH, description_field_xpath))).send_keys(description_text)
-    driver.switch_to.default_content()  # switch back from the iframe to the main frame
+
+    # wait for text field to load
+    description_field = WebDriverWait(driver, 5).until(
+        EC.element_to_be_clickable((By.XPATH, description_field_xpath)))
+
+    # scroll to element (for user to see)
     time.sleep(delay)
-    body.send_keys(Keys.PAGE_UP)
-    body.send_keys(Keys.PAGE_UP)
+
+    # enter description
+    description_field.send_keys(description_text)
+
+    # switch focus back from the iframe to the main frame
+    driver.switch_to.default_content()
+    time.sleep(delay)
 
 
 def upload_photos(dir_path):
@@ -118,6 +136,7 @@ def upload_photos(dir_path):
     for file_path in file_paths:
         printt(f"Uploading #{count}: {file_path}")
         last_upload_element = driver.find_elements(By.XPATH, upload_xpath)[-1]
+        center_element(last_upload_element)
         last_upload_element.send_keys(file_path)
         count += 1
         if count > 5:  # from here extra upload elements are generated which take more time
@@ -137,6 +156,7 @@ def place_advertisement(dir_path):
         description_file_lines = description_file.readlines()
 
     title = description_file_lines[0].strip()
+    print(f"Uploading advertisement for '{title}'")
 
     description_text = ""
     for line in description_file_lines[1:]:
@@ -147,9 +167,12 @@ def place_advertisement(dir_path):
     enter_description(description_text)
     upload_photos(dir_path)
 
+    # wait for url to change, this means the user has accepted the upload
+    print(f"Verify the details and click upload to place the advertisement.")
+    WebDriverWait(driver, 9999999).until(EC.url_changes(driver.current_url))
     time.sleep(delay)
-    body = driver.find_element(By.CSS_SELECTOR, "body")
-    body.send_keys(Keys.PAGE_DOWN)
+    print(f"Uploaded to Marktplaats!")
+    time.sleep(delay)
 
 
 def ask_folders():

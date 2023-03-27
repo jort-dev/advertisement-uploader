@@ -12,6 +12,10 @@ Activate the created virtual environment:
 ```shell
 venv\Scripts\activate
 ```
+On Linux, you need to have the following packages installed:
+```shell
+yay -S gobject-introspection 
+```
 Install the required Python packages:
 ```shell
 pip install -r requirements.txt
