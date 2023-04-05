@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-driver.find_element(By.XPATH, '//*[@id="html5_1gr6gtf1l1q4a11i15et1qan1lee4"]').send_keys('/home/jort/Pictures/cat_hole.jpg')
-"""
 import argparse
 import os
 import sys
@@ -14,17 +11,74 @@ from natsort import natsorted
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.common.action_chains import ActionChains
 
-delay = 1
+delay = 0.1
+open_tabs = []
 marktplaats_upload_url = "https://www.marktplaats.nl/plaats"
+tweakers_login_url = "https://tweakers.net/my.tnet/login/"
+tweakers_upload_url = "https://tweakers.net/aanbod/nieuw/aanbod/"
 
 
 def printt(*argss, **kwargs):
     if args.verbose:
         to_print = " ".join(map(str, argss))
         print(to_print, **kwargs)
+
+
+def sleep_until_url_change():
+    try:
+        url = driver.current_url
+        while True:
+            if url != driver.current_url:
+                break
+            time.sleep(1)
+    except:
+        traceback.print_exc()
+        print(f"URL not changed but breaking because of above exception")
+
+
+# only support for 2 tabs: 1 and 2
+def switch_to_tab(tab_number):
+    amount_of_tabs = len(driver.window_handles)
+    printt(f"Switching to tab {tab_number}/{amount_of_tabs}")
+
+    # opening tab whilst another page loads introduces a big delay
+    WebDriverWait(driver, 3).until(lambda x: driver.execute_script("return document.readyState") == "complete")
+
+    # save the original tab reference
+    if len(open_tabs) == 0:
+        tab1_handle = driver.current_window_handle
+        open_tabs.append(tab1_handle)
+
+    # create the second tab if it does not exist
+    if tab_number > 1 and amount_of_tabs == 1:
+        print(f"Creating new tab")
+        driver.switch_to.new_window('tab')
+        WebDriverWait(driver, 3).until(EC.number_of_windows_to_be(2))
+        for window_handle in driver.window_handles:
+            if window_handle != open_tabs[0]:
+                driver.switch_to.window(window_handle)
+                open_tabs.append(window_handle)  # tab2_handle
+
+    # switch tab
+    if tab_number == 1:
+        driver.switch_to.window(open_tabs[0])
+    else:
+        driver.switch_to.window(open_tabs[1])
+
+
+def tab_and_get(url: str, tab_number: int):
+    switch_to_tab(tab_number)
+    driver.get(url)
+
+
+def remove_hidden_attribute(xpath):
+    printt(f"Removing hidden tag on element with xpath={xpath}")
+    element = driver.find_element(By.XPATH, xpath)
+    driver.execute_script(
+        "arguments[0].removeAttribute('hidden')", element)
 
 
 def center_element(element):
@@ -39,7 +93,8 @@ def enter_field(xpath, text):
         if element is None:
             quit(f"Could not find element with {xpath} to enter {text}")
         center_element(element)
-        printt(f"Entering {text}")
+        time.sleep(delay)
+        printt(f"Entering text in field: '{text}'")
         element.send_keys(text)
         time.sleep(delay)
     except Exception as e:
@@ -55,7 +110,8 @@ def click_button(xpath):
         if button is None:
             quit(f"Could not find button with {xpath} to click")
         center_element(button)
-        printt(f"Clicking button.")
+        time.sleep(delay)
+        printt(f"Clicking button with xpath={xpath}")
         button.click()
         time.sleep(delay)
     except Exception as e:
@@ -63,23 +119,38 @@ def click_button(xpath):
         raise e
 
 
-def login(username, password):
-    printt(f"Logging in {username} with password {password}")
+def login_marktplaats(username, password):
+    printt(f"Logging in to Marktplaats with {username}, {password}")
     cookie_button_xpath = '//*[@id="gdpr-consent-banner-accept-button"]'
     email_field_xpath = '//*[@id="email"]'
     password_field_xpath = '//*[@id="password"]'
     submit_button_xpath = '//*[@id="account-login-button"]'
 
-    driver.get(marktplaats_upload_url)
+    tab_and_get(marktplaats_upload_url, 1)
     click_button(cookie_button_xpath)
     enter_field(email_field_xpath, username)
     enter_field(password_field_xpath, password)
     click_button(submit_button_xpath)
+    time.sleep(2)
 
-    printt(f"Were in.")
+    printt(f"Marktplaats logged in")
 
 
-def enter_title(title):
+def login_tweakers(username, password):
+    printt(f"Logging in to Tweakers with {username}, {password}")
+    tab_and_get(tweakers_login_url, 2)
+    username_xpath = '//*[@id="tweakers_login_form_user"]'
+    password_xpath = '//*[@id="tweakers_login_form_password"]'
+    enter_field(username_xpath, username)
+    enter_field(password_xpath, password)
+    time.sleep(delay)
+    password_field = driver.find_element(By.XPATH, password_xpath)
+    password_field.send_keys(Keys.ENTER)
+    time.sleep(2)
+    printt(f"Tweakers logged in")
+
+
+def marktplaats_enter_title(title):
     title_field_xpath = '//*[@id="category-keywords"]'
     enter_field(title_field_xpath, title)
 
@@ -91,11 +162,7 @@ def enter_title(title):
     click_button(submit_title_button_xpath)
 
 
-def enter_description(description_text):
-    time.sleep(1)
-    body = driver.find_element(By.CSS_SELECTOR, "body")
-    body.send_keys(Keys.PAGE_DOWN)
-    time.sleep(delay)
+def marktplaats_enter_description(description_text):
     description_iframe_xpath = '//*[@id="description_nl-NL_ifr"]'
     description_field_xpath = '//*[@id="tinymce"]'
 
@@ -108,6 +175,7 @@ def enter_description(description_text):
         EC.element_to_be_clickable((By.XPATH, description_field_xpath)))
 
     # scroll to element (for user to see)
+    center_element(description_field)
     time.sleep(delay)
 
     # enter description
@@ -118,7 +186,7 @@ def enter_description(description_text):
     time.sleep(delay)
 
 
-def upload_photos(dir_path):
+def marktplaats_upload_photos(dir_path):
     upload_xpath = "//input[@tabindex = '-1']"
     file_paths = []
     for filename in os.listdir(dir_path):
@@ -132,47 +200,162 @@ def upload_photos(dir_path):
     file_paths = natsorted(file_paths, key=lambda y: y.lower())  # sort items same as the file manager does
     printt(f"We have {len(file_paths)} images to upload.")
 
-    count = 1
+    count = 0
     for file_path in file_paths:
-        printt(f"Uploading #{count}: {file_path}")
-        last_upload_element = driver.find_elements(By.XPATH, upload_xpath)[-1]
+        count += 1
+        printt(f"Uploading photo {count}/{len(file_paths)}: {file_path}")
+        upload_elements = driver.find_elements(By.XPATH, upload_xpath)
+        last_upload_element = upload_elements[-1]
         center_element(last_upload_element)
         last_upload_element.send_keys(file_path)
-        count += 1
-        if count > 5:  # from here extra upload elements are generated which take more time
-            time.sleep(2)
-        else:
-            time.sleep(1)
+        # wait for next upload box to appear
+        while True:
+            if len(driver.find_elements(By.XPATH, upload_xpath)) > len(upload_elements):
+                break
+            time.sleep(0.1)
 
 
-def place_advertisement(dir_path):
-    printt(f"Placing advertisement from {dir_path}")
-    driver.get(marktplaats_upload_url)
-    txt_files = [os.path.join(dir_path, x) for x in os.listdir(dir_path) if x.endswith(".txt")]
-    if len(txt_files) == 0:
-        printt(f"No description found.")
-        raise ValueError
-    with open(txt_files[0]) as description_file:
-        description_file_lines = description_file.readlines()
-
-    title = description_file_lines[0].strip()
-    print(f"Uploading advertisement for '{title}'")
-
-    description_text = ""
-    for line in description_file_lines[1:]:
-        description_text += line
-    description_text.strip()
-
-    enter_title(title)
-    enter_description(description_text)
-    upload_photos(dir_path)
-
-    # wait for url to change, this means the user has accepted the upload
-    print(f"Verify the details and click upload to place the advertisement.")
-    WebDriverWait(driver, 9999999).until(EC.url_changes(driver.current_url))
+def configure_advertisement():
+    printt(f"Configuring advertisement")
+    printt(f"Set pickup only")
+    delivery_method_xpath = '//*[@id="deliveryMethod"]/div/select'
+    delivery_method_dropdown = driver.find_element(By.XPATH, delivery_method_xpath)
+    center_element(delivery_method_dropdown)
     time.sleep(delay)
+    select = Select(delivery_method_dropdown)
+    select.select_by_visible_text("Ophalen")
+    printt("Set free plan")
+    plan_xpath = '//*[@id="js-bundle-FREE"]'
+    remove_hidden_attribute(plan_xpath)
+    click_button(plan_xpath)
+    printt(f"Advertisement configured")
+
+
+def upload_marktplaats(ad):
+    printt(f"Placing advertisement on Marktplaats: {ad['title']}")
+    tab_and_get(marktplaats_upload_url, 1)
+
+    # title
+    marktplaats_enter_title(ad['title'])
+
+    # photos
+    marktplaats_upload_photos(ad['dir_path'])
+
+    # description
+    marktplaats_enter_description(ad['description'])
+
+    # price
+    asking_price_xpath = '//*[@id="syi-bidding-price"]/input'
+    enter_field(asking_price_xpath, ad['price'])
+
+    # min price
+    min_price_xpath = '//*[@id="syi-bidding-minimumprice"]/input'
+    enter_field(min_price_xpath, ad['min_price'])
+
+    # zip code
+    zip_code_xpath = '//*[@id="postCode"]/input'
+    enter_field(zip_code_xpath, ad['zip_code'])
+
+    # delivery method
+    delivery_method_xpath = '//*[@id="deliveryMethod"]/div/select'
+    delivery_method_dropdown = driver.find_element(By.XPATH, delivery_method_xpath)
+    center_element(delivery_method_dropdown)
+    time.sleep(delay)
+    select = Select(delivery_method_dropdown)
+    select.select_by_visible_text("Ophalen")
+    time.sleep(delay)
+
+    # advertisement plan
+    plan_xpath = '//*[@id="js-bundle-FREE"]'
+    remove_hidden_attribute(plan_xpath)
+    click_button(plan_xpath)
+
+    print(f"Verify the details and click upload to place the advertisement to Marktplaats.")
+    sleep_until_url_change()
+
     print(f"Uploaded to Marktplaats!")
     time.sleep(delay)
+
+
+def upload_tweakers(ad):
+    printt(f"Placing advertisement on Tweakers: {ad['title']}")
+    tab_and_get(tweakers_upload_url, 2)
+
+    # category
+    category_xpath = '//*[@id="advertisement_form_relatedTweakbase_searchProduct"]'
+    enter_field(category_xpath, ad['title'])
+
+    # title
+    title_xpath = '//*[@id="advertisement_form_title"]'
+    enter_field(title_xpath, ad['title'])
+
+    # description
+    description_xpath = '//*[@id="advertisement_form_description"]'
+    enter_field(description_xpath, ad['description'])
+
+    # price
+    price_xpath = '//*[@id="advertisement_form_price_price"]'
+    enter_field(price_xpath, ad['price'])
+
+    state_xpath = '//*[@id="advertisement_form_productState"]'
+    photo_upload_xpath = '//*[@id="advertisement_form_images_uploadedImages"]'
+    zip_code_xpath = '//*[@id="advertisement_form_address_postalCode"]'
+    city_xpath = '//*[@id="advertisement_form_address_city"]'
+    allow_reactions_xpath = '//*[@id="advertisement_form_allowResponses"]'
+    delivery_methods_xpath = '//*[@id="advertisement_form_deliveryMethods_1"]'
+    delivery_costs_xpath = '//*[@id="advertisement_form_deliveryCosts"]'
+    payment_method_xpath = '//*[@id="advertisement_form_paymentOptions_7"]'
+
+    print(f"Verify the details and click upload to place the advertisement to Tweakers.")
+    sleep_until_url_change()
+
+    print(f"Uploaded to Tweakers!")
+
+
+def assemble_advertisement_info(dir_path):
+    ad = {}
+    # find .txt file
+    txt_files = [os.path.join(dir_path, x) for x in os.listdir(dir_path) if x.endswith(".txt")]
+    if len(txt_files) != 1:
+        print(f"Expected 1 description .txt file but found {len(txt_files)}")
+        raise ValueError
+
+    # read .txt file
+    with open(txt_files[0]) as file:
+        file_lines = file.readlines()
+
+    # title
+    title = file_lines[0].strip()
+    ad["title"] = title
+
+    # price
+    asking_price = file_lines[1].strip()
+    if args.default_price != "":
+        asking_price = args.default_price
+    ad["price"] = asking_price
+
+    # min price
+    min_price = args.minimum_price
+    if min_price == "":
+        min_price = "0"
+    ad["min_price"] = min_price
+
+    # description text
+    description_text = ""
+    for line in file_lines[2:]:
+        description_text += line
+    description_text.strip()
+    description_text += args.default_description  # append default description footer
+    ad["description"] = description_text
+
+    # zip code
+    ad["zip_code"] = zip_code  # from args / file
+
+    # folder path
+    ad["dir_path"] = dir_path
+
+    printt(f"Parsed advertisement: {ad}")
+    return ad
 
 
 def ask_folders():
@@ -253,6 +436,21 @@ parser.add_argument("-v", "--verbose",
                     help="prints more messages about the process",
                     action="store_true",
                     )
+parser.add_argument("-p", "--default-price",
+                    help="the price enter for the advertisements, ignoring the one defined in the description file",
+                    type=str,
+                    default=""
+                    )
+parser.add_argument("-d", "--default-description",
+                    help="the text to append after the description of the advertisements",
+                    type=str,
+                    default=""
+                    )
+parser.add_argument("-m", "--minimum-price",
+                    help="the minimum price to enter for the advertisements",
+                    type=str,
+                    default=""
+                    )
 parser.add_argument("-mu", "--marktplaats-username",
                     help="your Marktplaats login",
                     type=str,
@@ -270,6 +468,11 @@ parser.add_argument("-tu", "--tweakers-username",
                     )
 parser.add_argument("-tp", "--tweakers-password",
                     help="your Tweakers password",
+                    type=str,
+                    default=""
+                    )
+parser.add_argument("-zc", "--zip_code",
+                    help="your zip code, for example 1234AB",
                     type=str,
                     default=""
                     )
@@ -298,30 +501,43 @@ tweakers_password = read_credential(
     credential_path="credentials/tweakers_password.txt",
     argument=args.tweakers_password
 )
-
-# instantiate chrome
-options = uc.ChromeOptions()
-# options.add_argument("--password-store=basic") # adding this does not work with Marktplaats
-options.add_experimental_option(
-    "prefs",
-    {
-        "credentials_enable_service": False,
-        "profile.password_manager_enabled": False,
-    },
+zip_code = read_credential(
+    credential_path="credentials/zip_code.txt",
+    argument=args.zip_code
 )
-options.add_argument("--disable-notifications")
-driver = uc.Chrome(options=options)
+
+
+def get_driver():
+    # instantiate chrome
+    options = uc.ChromeOptions()
+    options.add_experimental_option(
+        "prefs",
+        {
+            "credentials_enable_service": False,
+            "profile.password_manager_enabled": False,
+        },
+    )
+    options.add_argument("--disable-notifications")  # not needed
+    options.add_argument("--disable-popup-blocking")  # disable are you sure to leave this page? does not work
+    options.set_capability('unhandledPromptBehavior', 'accept')  # default is dismiss, which confuses all the code
+
+    driver = uc.Chrome(options=options)
+    return driver
+
 
 try:
     try:
-        login("business.jort@gmail.com", "zakenman^2")
+        driver = get_driver()
         folder_paths = get_folder_paths()
+        login_marktplaats(marktplaats_username, marktplaats_password)
+        login_tweakers(tweakers_username, tweakers_password)
         for folder_path in folder_paths:
-            place_advertisement(folder_path)
+            advertisement_info = assemble_advertisement_info(folder_path)
+            upload_marktplaats(advertisement_info)
+            upload_tweakers(advertisement_info)
 
     except Exception as e:
         traceback.print_exc()
-        print(f"Failed to place.")
 
     print(f"Program finished.")
     while True:
