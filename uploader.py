@@ -15,6 +15,7 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.wait import WebDriverWait
 
 delay = 0.1
+timeout = 10
 open_tabs = []
 marktplaats_upload_url = "https://www.marktplaats.nl/plaats"
 tweakers_login_url = "https://tweakers.net/my.tnet/login/"
@@ -25,6 +26,15 @@ def printt(*argss, **kwargs):
     if args.verbose:
         to_print = " ".join(map(str, argss))
         print(to_print, **kwargs)
+
+
+def select_dropdown(xpath, option_text):
+    dropdown = driver.find_element(By.XPATH, xpath)
+    center_element(dropdown)
+    time.sleep(delay)
+    select = Select(dropdown)
+    select.select_by_visible_text(option_text)
+    time.sleep(delay)
 
 
 def sleep_until_url_change():
@@ -45,7 +55,7 @@ def switch_to_tab(tab_number):
     printt(f"Switching to tab {tab_number}/{amount_of_tabs}")
 
     # opening tab whilst another page loads introduces a big delay
-    WebDriverWait(driver, 3).until(lambda x: driver.execute_script("return document.readyState") == "complete")
+    WebDriverWait(driver, timeout).until(lambda x: driver.execute_script("return document.readyState") == "complete")
 
     # save the original tab reference
     if len(open_tabs) == 0:
@@ -56,7 +66,7 @@ def switch_to_tab(tab_number):
     if tab_number > 1 and amount_of_tabs == 1:
         print(f"Creating new tab")
         driver.switch_to.new_window('tab')
-        WebDriverWait(driver, 3).until(EC.number_of_windows_to_be(2))
+        WebDriverWait(driver, timeout).until(EC.number_of_windows_to_be(2))
         for window_handle in driver.window_handles:
             if window_handle != open_tabs[0]:
                 driver.switch_to.window(window_handle)
@@ -88,7 +98,7 @@ def center_element(element):
 
 def enter_field(xpath, text):
     try:
-        element = WebDriverWait(driver, 3).until(
+        element = WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((By.XPATH, xpath)))
         if element is None:
             quit(f"Could not find element with {xpath} to enter {text}")
@@ -104,7 +114,7 @@ def enter_field(xpath, text):
 
 def click_button(xpath):
     try:
-        button = WebDriverWait(driver, 3).until(
+        button = WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((By.XPATH, xpath)))
         # element = driver.find_element(by=By.XPATH, value=xpath)
         if button is None:
@@ -167,11 +177,11 @@ def marktplaats_enter_description(description_text):
     description_field_xpath = '//*[@id="tinymce"]'
 
     # wait for the description element to load, as it is within an iframe
-    WebDriverWait(driver, 5).until(
+    WebDriverWait(driver, timeout).until(
         EC.frame_to_be_available_and_switch_to_it((By.XPATH, description_iframe_xpath)))
 
     # wait for text field to load
-    description_field = WebDriverWait(driver, 5).until(
+    description_field = WebDriverWait(driver, timeout).until(
         EC.element_to_be_clickable((By.XPATH, description_field_xpath)))
 
     # scroll to element (for user to see)
@@ -186,24 +196,12 @@ def marktplaats_enter_description(description_text):
     time.sleep(delay)
 
 
-def marktplaats_upload_photos(dir_path):
+def marktplaats_upload_photos(image_paths):
     upload_xpath = "//input[@tabindex = '-1']"
-    file_paths = []
-    for filename in os.listdir(dir_path):
-        file_path = os.path.join(dir_path, filename)
-        if not os.path.isfile(file_path):
-            continue
-        if not file_path.lower().endswith(".jpg"):
-            continue
-        file_paths.append(file_path)
-
-    file_paths = natsorted(file_paths, key=lambda y: y.lower())  # sort items same as the file manager does
-    printt(f"We have {len(file_paths)} images to upload.")
-
     count = 0
-    for file_path in file_paths:
+    for file_path in image_paths:
         count += 1
-        printt(f"Uploading photo {count}/{len(file_paths)}: {file_path}")
+        printt(f"Uploading photo {count}/{len(image_paths)}: {file_path}")
         upload_elements = driver.find_elements(By.XPATH, upload_xpath)
         last_upload_element = upload_elements[-1]
         center_element(last_upload_element)
@@ -215,20 +213,14 @@ def marktplaats_upload_photos(dir_path):
             time.sleep(0.1)
 
 
-def configure_advertisement():
-    printt(f"Configuring advertisement")
-    printt(f"Set pickup only")
-    delivery_method_xpath = '//*[@id="deliveryMethod"]/div/select'
-    delivery_method_dropdown = driver.find_element(By.XPATH, delivery_method_xpath)
-    center_element(delivery_method_dropdown)
-    time.sleep(delay)
-    select = Select(delivery_method_dropdown)
-    select.select_by_visible_text("Ophalen")
-    printt("Set free plan")
-    plan_xpath = '//*[@id="js-bundle-FREE"]'
-    remove_hidden_attribute(plan_xpath)
-    click_button(plan_xpath)
-    printt(f"Advertisement configured")
+def tweakers_upload_photos(image_paths):
+    upload_xpath = '//*[@id="advertisement_form_images"]/p[1]/input[1]'
+
+    count = 0
+    for file_path in image_paths:
+        count += 1
+        printt(f"Uploading photo {count}/{len(image_paths)}: {file_path}")
+        enter_field(upload_xpath, file_path)
 
 
 def upload_marktplaats(ad):
@@ -239,7 +231,7 @@ def upload_marktplaats(ad):
     marktplaats_enter_title(ad['title'])
 
     # photos
-    marktplaats_upload_photos(ad['dir_path'])
+    marktplaats_upload_photos(ad['image_paths'])
 
     # description
     marktplaats_enter_description(ad['description'])
@@ -258,12 +250,7 @@ def upload_marktplaats(ad):
 
     # delivery method
     delivery_method_xpath = '//*[@id="deliveryMethod"]/div/select'
-    delivery_method_dropdown = driver.find_element(By.XPATH, delivery_method_xpath)
-    center_element(delivery_method_dropdown)
-    time.sleep(delay)
-    select = Select(delivery_method_dropdown)
-    select.select_by_visible_text("Ophalen")
-    time.sleep(delay)
+    select_dropdown(delivery_method_xpath, "Ophalen")
 
     # advertisement plan
     plan_xpath = '//*[@id="js-bundle-FREE"]'
@@ -281,7 +268,7 @@ def upload_tweakers(ad):
     printt(f"Placing advertisement on Tweakers: {ad['title']}")
     tab_and_get(tweakers_upload_url, 2)
 
-    # category
+    # category (user should configure this himself, too many options)
     category_xpath = '//*[@id="advertisement_form_relatedTweakbase_searchProduct"]'
     enter_field(category_xpath, ad['title'])
 
@@ -297,14 +284,32 @@ def upload_tweakers(ad):
     price_xpath = '//*[@id="advertisement_form_price_price"]'
     enter_field(price_xpath, ad['price'])
 
+    # state
     state_xpath = '//*[@id="advertisement_form_productState"]'
-    photo_upload_xpath = '//*[@id="advertisement_form_images_uploadedImages"]'
+    select_dropdown(state_xpath, "gebruikssporen")
+
+    # photos
+    tweakers_upload_photos(ad["image_paths"])
+
+    # zip code
     zip_code_xpath = '//*[@id="advertisement_form_address_postalCode"]'
-    city_xpath = '//*[@id="advertisement_form_address_city"]'
-    allow_reactions_xpath = '//*[@id="advertisement_form_allowResponses"]'
-    delivery_methods_xpath = '//*[@id="advertisement_form_deliveryMethods_1"]'
+    enter_field(zip_code_xpath, ad['zip_code'])
+
+    # delivery cost
     delivery_costs_xpath = '//*[@id="advertisement_form_deliveryCosts"]'
+    select_dropdown(delivery_costs_xpath, "Niet van toepassing")
+
+    # delivery method
+    delivery_methods_xpath = '//*[@id="advertisement_form_deliveryMethods_1"]'
+    click_button(delivery_methods_xpath)  # checkbox
+
+    # payment method
     payment_method_xpath = '//*[@id="advertisement_form_paymentOptions_7"]'
+    click_button(payment_method_xpath)  # checkbox
+
+    # allow reactions
+    allow_reactions_xpath = '//*[@id="advertisement_form_allowResponses"]'
+    click_button(allow_reactions_xpath) # checkbox
 
     print(f"Verify the details and click upload to place the advertisement to Tweakers.")
     sleep_until_url_change()
@@ -353,6 +358,18 @@ def assemble_advertisement_info(dir_path):
 
     # folder path
     ad["dir_path"] = dir_path
+
+    # image paths
+    image_paths = []
+    for filename in os.listdir(dir_path):
+        file_path = os.path.join(dir_path, filename)
+        if not os.path.isfile(file_path):
+            continue
+        if any(substring in file_path.lower() for substring in (".jpg", ".png", ".jpeg")):
+            image_paths.append(file_path)
+
+    image_paths = natsorted(image_paths, key=lambda y: y.lower())  # sort items same as the file manager does
+    ad["image_paths"] = image_paths
 
     printt(f"Parsed advertisement: {ad}")
     return ad
@@ -529,11 +546,11 @@ try:
     try:
         driver = get_driver()
         folder_paths = get_folder_paths()
-        login_marktplaats(marktplaats_username, marktplaats_password)
+        # login_marktplaats(marktplaats_username, marktplaats_password)
         login_tweakers(tweakers_username, tweakers_password)
         for folder_path in folder_paths:
             advertisement_info = assemble_advertisement_info(folder_path)
-            upload_marktplaats(advertisement_info)
+            # upload_marktplaats(advertisement_info)
             upload_tweakers(advertisement_info)
 
     except Exception as e:
