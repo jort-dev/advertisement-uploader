@@ -15,6 +15,14 @@ The description should be provided as a `.txt` file, and must contain the follow
 * Second line: asking price
 * Remaining lines: description
 
+## Running
+Activate the virtual environment you created (see the _Installing_ instructions below)   
+Run the program with `python uploader.py`.  
+The program asks for one or more folders which have the structure as defined above.  
+Then it will then enter the details on the advertisement site.  
+After entering, you review/edit the details and **press upload yourself**.  
+The program will then continue to the next.
+
 ## Installing
 Have the latest [Chrome browser](https://www.google.com/chrome/) installed.  
 Have the latest [Python version](https://www.python.org/downloads/windows/) installed, with python.exe added to the PATH.  
@@ -26,7 +34,7 @@ Activate the created virtual environment:
 ```shell
 venv\Scripts\activate
 ```
-On Linux, you need to have the following packages installed:
+On Linux, you may need to have the following packages installed:
 ```shell
 yay -S gobject-introspection 
 ```
@@ -35,16 +43,10 @@ Install the required Python packages:
 pip install -r requirements.txt
 ```
 
-## Running
-Open the terminal in the cloned folder and activate the created virtual environment:
-```shell
-venv\Scripts\activate
-```
-Run the script
-```shell
-python uploader.py
-```
-The script will now run, and asks for one or more folders which have the structure as defined above.
+
+
+
+
 
 
 
