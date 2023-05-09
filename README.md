@@ -1,15 +1,15 @@
 # Advertisement uploader
 A tool to upload your advertisements to multiple sites, like [Marktplaats](https://www.marktplaats.nl/) and [Tweakers](https://tweakers.net/aanbod/).  
 
-Use cases:  
+Use cases:
 * prevent manually entering the same advertisement information on multiple websites
 * quickly reupload your advertisements, useful for example if they expire or you want them to be higher up in the search results
 
-For each advertisement, the program expects a folder with images and a description text file.
+For each advertisement, the program expects a folder with photos and a text file for the description.
 
 ## Folder structure
 You will need to create a folder for each advertisement you want to upload.  
-Such a folder needs to contain the images and the description for the advertisement.  
+Such a folder needs to contain the photos and the description for the advertisement.  
 The description should be provided as a `.txt` file, and must contain the following:
 * First line: advertisement title
 * Second line: asking price
@@ -24,7 +24,7 @@ python -m venv venv
 ```
 Activate the created virtual environment:
 ```shell
-. venv\Scripts\activate
+venv\Scripts\activate
 ```
 On Linux, you need to have the following packages installed:
 ```shell
@@ -38,7 +38,7 @@ pip install -r requirements.txt
 ## Running
 Open the terminal in the cloned folder and activate the created virtual environment:
 ```shell
-. venv\Scripts\activate
+venv\Scripts\activate
 ```
 Run the script
 ```shell
