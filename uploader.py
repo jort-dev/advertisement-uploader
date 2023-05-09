@@ -214,9 +214,10 @@ def marktplaats_upload_photos(image_paths):
 
 
 def tweakers_upload_photos(image_paths):
-    upload_xpath = '//*[@id="advertisement_form_images"]/p[1]/input[1]'
+    upload_xpath = '//*[@id="row_advertisement_form_images"]/div[2]/twk-multi-image-upload/div[1]/input[1]'
 
     count = 0
+    # this is fast but will take a while to show up
     for file_path in image_paths:
         count += 1
         printt(f"Uploading photo {count}/{len(image_paths)}: {file_path}")
@@ -235,6 +236,10 @@ def upload_marktplaats(ad):
 
     # description
     marktplaats_enter_description(ad['description'])
+
+    # state
+    state_xpath = '//*[@id="syi-attribute-condition"]/div/select'
+    select_dropdown(state_xpath, "Gebruikt")
 
     # price
     asking_price_xpath = '//*[@id="syi-bidding-price"]/input'
@@ -394,6 +399,7 @@ def ask_folders():
     window = webview.create_window("", hidden=True)
     webview.start(open_file_dialog, window)
     printt(f"You picked these folders: {dir_paths}")
+    # dir_paths = ['/home/jort/Pictures/project_sell/chromecast_4k']  # TODO remove after testing
     return dir_paths
 
 
@@ -545,11 +551,11 @@ try:
     try:
         driver = get_driver()
         folder_paths = get_folder_paths()
-        # login_marktplaats(marktplaats_username, marktplaats_password)
+        login_marktplaats(marktplaats_username, marktplaats_password)
         login_tweakers(tweakers_username, tweakers_password)
         for folder_path in folder_paths:
             advertisement_info = assemble_advertisement_info(folder_path)
-            # upload_marktplaats(advertisement_info)
+            upload_marktplaats(advertisement_info)
             upload_tweakers(advertisement_info)
 
     except Exception as e:

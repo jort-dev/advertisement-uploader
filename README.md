@@ -1,6 +1,8 @@
 # Advertisement uploader
 A tool to upload your advertisements to multiple sites, like [Marktplaats](https://www.marktplaats.nl/) and [Tweakers](https://tweakers.net/aanbod/).  
 
+[Demo](https://youtu.be/2sHHOLa6-zo)  
+
 Use cases:
 * prevent manually entering the same advertisement information on multiple websites
 * quickly reupload your advertisements, useful for example if they expire or you want them to be higher up in the search results
@@ -16,12 +18,12 @@ The description should be provided as a `.txt` file, and must contain the follow
 * Remaining lines: description
 
 ## Running
-Activate the virtual environment you created (see the _Installing_ instructions below)   
-Run the program with `python uploader.py`.  
-The program asks for one or more folders which have the structure as defined above.  
-Then it will then enter the details on the advertisement site.  
-After entering, you review/edit the details and **press upload yourself**.  
-The program will then continue to the next.
+* Activate the virtual environment you created, see the _Installing_ instructions below
+* Run the program with `python uploader.py`
+* The program asks for one or more folders which have the structure as defined above
+* The program enters the details on the advertisement site
+* You review/edit the details and **press upload yourself**
+* The program will then continue to the next
 
 ## Installing
 Have the latest [Chrome browser](https://www.google.com/chrome/) installed.  
