@@ -1,13 +1,16 @@
 # Advertisement uploader
 A tool to upload your advertisements to multiple sites, like [Marktplaats](https://www.marktplaats.nl/) and [Tweakers](https://tweakers.net/aanbod/).  
-It is useful if you don't want to manually upload the same information on multiple sites, or if you want to reupload your advertisements for them to be higher up in the search results.
+
+Use cases:  
+* prevent manually entering the same advertisement information on multiple websites
+* quickly reupload your advertisements, useful for example if they expire or you want them to be higher up in the search results
+
 For each advertisement, the program expects a folder with images and a description text file.
 
 ## Folder structure
-For each advertisement you want to create, you need to create a folder.  
-This folder needs to contain the images, in the order you want them to show in the advertisement.
-The folder also must have a `.txt` file.  
-This `.txt` file must contain the following:
+You will need to create a folder for each advertisement you want to upload.  
+Such a folder needs to contain the images and the description for the advertisement.  
+The description should be provided as a `.txt` file, and must contain the following:
 * First line: advertisement title
 * Second line: asking price
 * Remaining lines: description
