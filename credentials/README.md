@@ -7,4 +7,4 @@ Create the following .txt files containing one line with:
 * `tweakers_password.txt`: your Tweakers password
 * `zip_code.txt`: your zip code, for example 1234AB
 
-Alternatively your credentials can also be provided to the program as CLI arguments, see `renamer.py --help`.
+Alternatively your credentials can also be provided to the program as CLI arguments, see `uploader.py --help`.

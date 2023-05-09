@@ -309,7 +309,7 @@ def upload_tweakers(ad):
 
     # allow reactions
     allow_reactions_xpath = '//*[@id="advertisement_form_allowResponses"]'
-    click_button(allow_reactions_xpath) # checkbox
+    click_button(allow_reactions_xpath)  # checkbox
 
     print(f"Verify the details and click upload to place the advertisement to Tweakers.")
     sleep_until_url_change()
@@ -322,8 +322,7 @@ def assemble_advertisement_info(dir_path):
     # find .txt file
     txt_files = [os.path.join(dir_path, x) for x in os.listdir(dir_path) if x.endswith(".txt")]
     if len(txt_files) != 1:
-        print(f"Expected 1 description .txt file but found {len(txt_files)}")
-        raise ValueError
+        quit(f"Expected 1 description .txt file but found {len(txt_files)}")
 
     # read .txt file
     with open(txt_files[0]) as file:
