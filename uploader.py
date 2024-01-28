@@ -611,11 +611,11 @@ zip_code = read_credential(
 def upload_ads():
     folder_paths = get_folder_paths()
     login_marktplaats(marktplaats_username, marktplaats_password)
-    # login_tweakers(tweakers_username, tweakers_password)
+    login_tweakers(tweakers_username, tweakers_password)
     for folder_path in folder_paths:
         advertisement_info = assemble_advertisement_info(folder_path)
         upload_marktplaats(advertisement_info)
-        # upload_tweakers(advertisement_info)
+        upload_tweakers(advertisement_info)
 
 
 ########################################################################################################################
