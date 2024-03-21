@@ -45,8 +45,17 @@ Install the required Python packages:
 pip install -r requirements.txt
 ```
 
+# Installing instructions for  Mac M1
 
+To make the installation work on osx apple silicon, you need to install some additional dependencies. 
 
+```shell
+pyenv install 3.7.13
+python -m pip install PyQt5
+brew install pygobject3 libffi
+pip install -Iv undetected-chromedriver==3.0.3
+pip install -r requirements.txt
+```
 
 
 
