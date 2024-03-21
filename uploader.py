@@ -15,6 +15,9 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.wait import WebDriverWait
 
 delay = 0.1
+photo_upload_delay = 0.6
+page_load_delay = 2
+url_change_delay = 2
 timeout = 10
 open_tabs = []
 marktplaats_upload_url = "https://www.marktplaats.nl/plaats"
@@ -55,7 +58,7 @@ def sleep_until_url_change():
         while True:
             if url != driver.current_url:
                 break
-            time.sleep(1)
+            time.sleep(url_change_delay)
     except:
         traceback.print_exc()
         warn(f"URL not changed but breaking because of above exception")
@@ -155,13 +158,12 @@ def login_marktplaats(username, password):
     email_field_xpath = '//*[@id="email"]'
     password_field_xpath = '//*[@id="password"]'
     submit_button_xpath = '//*[@id="account-login-button"]'
-
     tab_and_get(marktplaats_upload_url, 1)
     click_button(cookie_button_xpath)
     enter_field(email_field_xpath, username)
     enter_field(password_field_xpath, password)
     click_button(submit_button_xpath)
-    time.sleep(2)
+    time.sleep(page_load_delay)
 
     printt(f"Marktplaats logged in")
 
@@ -207,6 +209,7 @@ def marktplaats_upload_photos(image_paths):
     count = 0
     for file_path in image_paths:
         count += 1
+        time.sleep(photo_upload_delay)
         printt(f"Uploading photo {count}/{len(image_paths)}: {file_path}")
         upload_elements = driver.find_elements(By.XPATH, upload_xpath)
         last_upload_element = upload_elements[-1]
@@ -217,7 +220,7 @@ def marktplaats_upload_photos(image_paths):
         while True:
             if len(driver.find_elements(By.XPATH, upload_xpath)) > len(upload_elements):
                 break
-            time.sleep(0.1)
+            time.sleep(delay)
             count += 1
             if count > 100:
                 break
@@ -257,10 +260,10 @@ def upload_marktplaats(ad):
     enter_field(zip_code_xpath, ad['zip_code'])
 
     # delivery method
-    delivery_method_xpath = '//*[@id="deliveryMethod"]/div/select'
-    delivery_method_alt_xpath = '//*[@id="Verzenden"]'  # soms veranderd de pagina
-    select_dropdown(delivery_method_xpath, "Verzenden")
-    click_button(delivery_method_alt_xpath)
+    delivery_method_xpath = '//*[@id="Ophalen_of_Verzenden"]'
+    package_size_xpath = '//*[@id="packageSizeRadioGroup"]/label[1]'
+    click_button(delivery_method_xpath)
+    click_button(package_size_xpath)
 
     # advertisement plan
     plan_xpath = '//*[contains(text(), "Standaard zichtbaarheid")]'
@@ -289,7 +292,7 @@ def login_tweakers(username, password):
     time.sleep(delay)
     password_field = driver.find_element(By.XPATH, password_xpath)
     password_field.send_keys(Keys.ENTER)
-    time.sleep(2)
+    time.sleep(page_load_delay)
     printt(f"Tweakers logged in")
 
 
@@ -384,7 +387,7 @@ def ask_folders():
     window = webview.create_window("", hidden=True)
     webview.start(open_file_dialog, window)
     printt(f"You picked these folders: {dir_paths}")
-    # dir_paths = ['/home/jort/Pictures/project_sell/chromecast_4k']  # TODO remove after testing
+    #dir_paths = ['./advertisements']  # TODO remove after testing
     return dir_paths
 
 
@@ -566,11 +569,42 @@ parser.add_argument("-tp", "--tweakers-password",
                     type=str,
                     default=""
                     )
+parser.add_argument("-to", "--tweakers-only",
+                    help="Upload ad only to Tweakers",
+                    action='store_true',
+                    default=False,
+                    )
+parser.add_argument("-mo", "--marktplaats-only",
+                    help="Upload ad only to Marktplaats",
+                    action='store_true',
+                    default=False,
+                    )
 parser.add_argument("-zc", "--zip_code",
                     help="your zip code, for example 1234AB",
                     type=str,
                     default=""
                     )
+parser.add_argument("--delay",
+                    help="general delay between actions, in seconds",
+                    type=float,
+                    default=0.1
+                    )
+parser.add_argument("--photo-upload-delay",
+                    help="delay between photo uploads, in seconds",
+                    type=float,
+                    default=0.6
+                    )
+parser.add_argument("--page-load-delay",
+                    help="delay to wait for page loading, in seconds",
+                    type=float,
+                    default=2
+                    )
+parser.add_argument("--url-change-delay",
+                    help="delay for URL change actions, in seconds",
+                    type=float,
+                    default=2
+                    )
+
 parser.add_argument("folder_paths",
                     nargs=argparse.REMAINDER,
                     help="the paths to the advertisement folder(s),"
@@ -618,6 +652,22 @@ def upload_ads():
         upload_tweakers(advertisement_info)
 
 
+def upload_only_marktplaats_ads():
+    folder_paths = get_folder_paths()
+    login_marktplaats(marktplaats_username, marktplaats_password)
+    for folder_path in folder_paths:
+        advertisement_info = assemble_advertisement_info(folder_path)
+        upload_marktplaats(advertisement_info)
+
+
+def upload_only_tweakers_ads():
+    folder_paths = get_folder_paths()
+    login_tweakers(tweakers_username, tweakers_password)
+    for folder_path in folder_paths:
+        advertisement_info = assemble_advertisement_info(folder_path)
+        upload_tweakers(advertisement_info)
+
+
 ########################################################################################################################
 # PROGRAM :')
 
@@ -627,7 +677,12 @@ def upload_ads():
 driver = get_driver()
 try:
     try:
-        upload_ads()
+        if args.marktplaats_only:
+            upload_only_marktplaats_ads()
+        if args.tweakers_only:
+            upload_only_tweakers_ads()
+        else:
+            upload_ads()
     except Exception as e:
         traceback.print_exc()
 
